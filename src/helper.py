@@ -6,7 +6,7 @@ from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-GOOGLE_API_KEY = "AIzaSyCljuy1qHYxMoG8KaM17-KZ4G10qxGm7A8"
+GOOGLE_API_KEY = "AIzaSyDQXJ9QVm79XR5a9Ol9Bdo4D30EVwD-dEg"
 
 # ---------------------------------------------------------
 # PDF READER

@@ -9,9 +9,8 @@ from src.helper import (
 )
 
 # ----- Set API key directly -----
-GOOGLE_API_KEY = "AIzaSyCljuy1qHYxMoG8KaM17-KZ4G10qxGm7A8"
-os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY  # ensure LangChain picks it up
-
+GOOGLE_API_KEY = "AIzaSyDQXJ9QVm79XR5a9Ol9Bdo4D30EVwD-dEg"
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY  
 # ---------------------------------
 
 def user_input(user_question):
