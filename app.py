@@ -8,20 +8,24 @@ from src.helper import (
     get_conversational_chain
 )
 
-# load_dotenv()
+# ----- Set API key directly -----
 GOOGLE_API_KEY = "AIzaSyCljuy1qHYxMoG8KaM17-KZ4G10qxGm7A8"
-if not GOOGLE_API_KEY:
-    st.error("Please set GOOGLE_API_KEY in your .env file")
+os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY  # ensure LangChain picks it up
+
+# ---------------------------------
 
 def user_input(user_question):
     if st.session_state.conversation is not None:
-        response = st.session_state.conversation({'question': user_question})
-        st.session_state.chatHistory = response['chat_history']
-        for i, message in enumerate(st.session_state.chatHistory):
-            if i % 2 == 0:
-                st.write("User: ", message.content)
-            else:
-                st.write("Reply: ", message.content)
+        try:
+            response = st.session_state.conversation({'question': user_question})
+            st.session_state.chatHistory = response['chat_history']
+            for i, message in enumerate(st.session_state.chatHistory):
+                if i % 2 == 0:
+                    st.write("User: ", message.content)
+                else:
+                    st.write("Reply: ", message.content)
+        except Exception as e:
+            st.error(f"Error generating response: {e}")
     else:
         st.error("Please upload and process PDFs first.")
 
@@ -37,22 +41,26 @@ def main():
 
     with st.sidebar:
         st.header("Upload PDF Files")
-        pdf_docs = st.file_uploader("Upload PDFs", accept_multiple_files=True)
+        pdf_docs = st.file_uploader("Upload PDFs", accept_multiple_files=True, type=["pdf"])
 
         if st.button("Submit & Process"):
             if pdf_docs:
                 with st.spinner("Processing PDFs..."):
-                    raw_text = get_pdf_text(pdf_docs)
-                    text_chunks = get_txt_chunks(raw_text)
-                    vector_store = get_vector_store(text_chunks, GOOGLE_API_KEY)
-                    st.session_state.conversation = get_conversational_chain(vector_store, GOOGLE_API_KEY)
-                st.success("PDFs processed successfully!")
+                    try:
+                        raw_text = get_pdf_text(pdf_docs)
+                        text_chunks = get_txt_chunks(raw_text)
+                        vector_store = get_vector_store(text_chunks, GOOGLE_API_KEY)
+                        st.session_state.conversation = get_conversational_chain(vector_store, GOOGLE_API_KEY)
+                        st.success("PDFs processed successfully!")
+                    except Exception as e:
+                        st.error(f"Error processing PDFs: {e}")
             else:
                 st.warning("Please upload at least one PDF file.")
 
     user_question = st.text_input("Ask something from your PDFs:")
     if user_question:
         user_input(user_question)
+
 
 if __name__ == "__main__":
     main()

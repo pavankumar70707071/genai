@@ -11,7 +11,6 @@ GOOGLE_API_KEY = "AIzaSyCljuy1qHYxMoG8KaM17-KZ4G10qxGm7A8"
 # ---------------------------------------------------------
 # PDF READER
 # ---------------------------------------------------------
-
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
@@ -27,11 +26,9 @@ def get_pdf_text(pdf_docs):
     print("📄 PDF Raw Text Length:", len(text))
     return text
 
-
 # ---------------------------------------------------------
 # CHUNKING
 # ---------------------------------------------------------
-
 def get_txt_chunks(text, chunk_size=500, chunk_overlap=100):
     if not text or len(text.strip()) == 0:
         raise ValueError("PDF contains no extractable text.")
@@ -50,54 +47,42 @@ def get_txt_chunks(text, chunk_size=500, chunk_overlap=100):
 
     return chunks
 
-
 # ---------------------------------------------------------
 # VECTOR STORE (FAISS)
 # ---------------------------------------------------------
-
 def get_vector_store(text_chunks, api_key=GOOGLE_API_KEY):
     if not api_key:
         raise ValueError("GOOGLE_API_KEY is missing.")
-
     if not text_chunks or len(text_chunks) == 0:
         raise ValueError("Text chunks are empty — cannot create vector DB.")
 
+    # Ensure API key is set
+    os.environ["GOOGLE_API_KEY"] = api_key
+
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/text-embedding-004",
-        google_api_key=api_key
+        model="models/text-embedding-004"
     )
 
     print("🔍 Generating embeddings...")
-    text_embeddings = embeddings.embed_documents(text_chunks)
+    try:
+        vector_store = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
+        print("✅ Vector Store Created Successfully")
+    except Exception as e:
+        raise RuntimeError(f"Error creating vector store: {e}")
 
-    print("🔹 Embeddings Generated:", len(text_embeddings))
-
-    if not text_embeddings or len(text_embeddings) == 0:
-        raise ValueError("Google returned empty embeddings — check PDF or API key.")
-
-    # Proper FAISS creation
-    pairs = [(text_chunks[i], text_embeddings[i]) for i in range(len(text_chunks))]
-
-    vector_store = FAISS.from_embeddings(
-        text_embeddings=pairs,
-        embedding=embeddings
-    )
-
-    print("✅ Vector Store Created Successfully")
     return vector_store
-
 
 # ---------------------------------------------------------
 # RAG CONVERSATIONAL CHAIN
 # ---------------------------------------------------------
-
 def get_conversational_chain(vector_store, api_key=GOOGLE_API_KEY):
     if not api_key:
         raise ValueError("GOOGLE_API_KEY is missing.")
 
+    os.environ["GOOGLE_API_KEY"] = api_key
+
     llm = ChatGoogleGenerativeAI(
         model="models/gemini-2.5-flash",
-        google_api_key=api_key,
         temperature=0.3
     )
 
