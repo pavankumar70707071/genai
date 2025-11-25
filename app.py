@@ -10,8 +10,8 @@ from src.helper import (
 
 # load_dotenv()
 GOOGLE_API_KEY = "AIzaSyCljuy1qHYxMoG8KaM17-KZ4G10qxGm7A8"
-# if not GOOGLE_API_KEY:
-#     st.error("Please set GOOGLE_API_KEY in your .env file")
+if not GOOGLE_API_KEY:
+    st.error("Please set GOOGLE_API_KEY in your .env file")
 
 def user_input(user_question):
     if st.session_state.conversation is not None:
