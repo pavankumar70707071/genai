@@ -1,90 +1,63 @@
 import os
 from PyPDF2 import PdfReader
-from langchain_google_genai import (
-    GoogleGenerativeAIEmbeddings,
-    ChatGoogleGenerativeAI
-)
+# from dotenv import load_dotenv
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_community.vectorstores import FAISS
-from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-
-# ---------------------------------------------------------
-# 🔑 GOOGLE API KEY (Use env variable in production)
-# ---------------------------------------------------------
+# Load environment variables
+# load_dotenv()
 GOOGLE_API_KEY = "AIzaSyCljuy1qHYxMoG8KaM17-KZ4G10qxGm7A8"
 
+# --- PDF PROCESSING ---
 
-# ---------------------------------------------------------
-# 📌 READ PDF FILES
-# ---------------------------------------------------------
 def get_pdf_text(pdf_docs):
     text = ""
     for pdf in pdf_docs:
         try:
-            reader = PdfReader(pdf)
-            for page in reader.pages:
+            pdf_reader = PdfReader(pdf)
+            for page in pdf_reader.pages:
                 page_text = page.extract_text()
                 if page_text:
                     text += page_text
         except Exception as e:
-            print(f"Error reading PDF {pdf.name}: {e}")
+            print(f"Error reading PDF file {pdf.name}: {e}")
+            continue
     return text
 
-
-# ---------------------------------------------------------
-# 📌 SPLIT INTO SMALL CHUNKS → Best for Gemini Embeddings
-# ---------------------------------------------------------
-def get_txt_chunks(text):
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300,     # small chunks = no timeout
-        chunk_overlap=50
+def get_txt_chunks(text, chunk_size=500, chunk_overlap=100):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+        length_function=len
     )
-    return splitter.split_text(text)
+    return text_splitter.split_text(text)
 
+# --- VECTOR STORE CREATION ---
 
-# ---------------------------------------------------------
-# 📌 CREATE FAISS STORE (NO BATCH EMBEDDING!)
-# ---------------------------------------------------------
 def get_vector_store(text_chunks, api_key=GOOGLE_API_KEY):
     if not api_key:
-        raise ValueError("GOOGLE_API_KEY is missing.")
+        raise ValueError("GOOGLE_API_KEY is required.")
 
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="models/embedding-001",
-        google_api_key=api_key,
-        request_timeout=60
+        model="models/text-embedding-004",
+        google_api_key=api_key     # ✅ fixed
     )
 
-    # ---- ❗ CRITICAL: manual embedding to avoid batching ----
-    embedded_pairs = []
-    for chunk in text_chunks:
-        try:
-            vector = embeddings.embed_query(chunk)   # safe + small
-            embedded_pairs.append((chunk, vector))
-        except Exception as e:
-            print(f"Embedding failed for chunk: {e}")
-
-    # Build FAISS vector store safely
-    vector_store = FAISS.from_embeddings(
-        embedded_pairs,
-        embeddings
-    )
-
+    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
     return vector_store
 
+# --- RAG CHAT MODEL ---
 
-# ---------------------------------------------------------
-# 📌 CREATE CONVERSATIONAL RAG CHAIN
-# ---------------------------------------------------------
 def get_conversational_chain(vector_store, api_key=GOOGLE_API_KEY):
     if not api_key:
-        raise ValueError("GOOGLE_API_KEY is missing.")
+        raise ValueError("GOOGLE_API_KEY is required.")
 
     llm = ChatGoogleGenerativeAI(
-        model="models/gemini-2.5-flash",   # Fast + cheap + accurate
-        google_api_key=api_key,
+        model="models/gemini-2.5-flash",   # ✅ fixed
+        google_api_key=api_key,           # ❗fix here too
         temperature=0.3
     )
 
@@ -95,15 +68,11 @@ def get_conversational_chain(vector_store, api_key=GOOGLE_API_KEY):
 
     chain = ConversationalRetrievalChain.from_llm(
         llm=llm,
-        retriever=vector_store.as_retriever(search_kwargs={"k": 4}),
+        retriever=vector_store.as_retriever(),
         memory=memory
     )
 
     return chain
 
-
-# ---------------------------------------------------------
-# Optional: Debug check
-# ---------------------------------------------------------
 if not GOOGLE_API_KEY:
-    print("⚠️ Warning: GOOGLE_API_KEY not found!")
+    print("Warning: GOOGLE_API_KEY not found.")
