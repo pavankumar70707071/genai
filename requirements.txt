@@ -1,9 +1,9 @@
 streamlit
 python-dotenv
 PyPDF2==3.0.1
-langchain==0.1.20
-langchain-community==0.0.38
-langchain-google-genai==1.0.7
+langchain>=0.2.9
+langchain-community>=0.1.0
+langchain-google-genai>=1.0.7
 faiss-cpu
 google-generativeai
 google-auth
